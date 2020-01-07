@@ -15,7 +15,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from main.views.LinksContainerView import LinksContainerView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('m3u8/<str:url>', LinksContainerView.as_view(), name='m3u8')
 ]
