@@ -1,5 +1,6 @@
 # Author: Timmy93
 # URL: https://github.com/Timmy93/M3uParser
+# Modified
 
 import os
 import re
@@ -34,7 +35,7 @@ class M3uParser:
 
     # Read all file lines
     def readAllLines(self):
-        self.lines = [line.rstrip('\n') for line in open(self.filename)]
+        self.lines = [line.rstrip('\n') for line in open(self.filename, encoding='utf-8')]
         return len(self.lines)
 
     def parseFile(self):
@@ -49,28 +50,27 @@ class M3uParser:
         lineInfo = self.lines[n]
         lineLink = self.lines[n + 1]
         if lineInfo != "#EXTM3U":
-            m = re.search("tvg-name=\"(.*?)\"", lineInfo)
-            name = m.group(1)
-            m = re.search("tvg-ID=\"(.*?)\"", lineInfo)
-            id = m.group(1)
-            m = re.search("tvg-logo=\"(.*?)\"", lineInfo)
-            logo = m.group(1)
-            m = re.search("group-title=\"(.*?)\"", lineInfo)
-            group = m.group(1)
-            m = re.search("[,](?!.*[,])(.*?)$", lineInfo)
-            title = m.group(1)
-            # ~ print(name+"||"+id+"||"+logo+"||"+group+"||"+title)
+            paramTemplate = (
+                ("tvg-name", "tvg-name=\"(.*?)\"", 1),
+                ("tvg-ID", "tvg-ID=\"(.*?)\"", 1),
+                ("tvg-logo", "tvg-logo=\"(.*?)\"", 1),
+                ("group-title", "group-title=\"(.*?)\"", 1),
+                ("title", "[,](?!.*[,])(.*?)$", 1),
+            )
 
-            test = {
-                "title": title,
-                "tvg-name": name,
-                "tvg-ID": id,
-                "tvg-logo": logo,
-                "tvg-group": group,
+            values = {
                 "titleFile": os.path.basename(lineLink),
-                "link": lineLink
+                "link": lineLink,
             }
-            self.files.append(test)
+
+            for item in paramTemplate:
+                m = re.search(item[1], lineInfo)
+                if m is None:
+                    continue
+                value = m.group(item[2])
+                values[item[0]] = value
+
+            self.files.append(values)
 
     def exportJson(self):
         # TODO
