@@ -10,8 +10,6 @@ from main.models import Source
 
 
 class Segment(models.Model):
-    SEGMENTS_TO_STORE = 10
-
     STATUS_NEW = 0
     STATUS_AVAILABLE = 1
     STATUS_WATCHED = 2
@@ -38,7 +36,7 @@ class Segment(models.Model):
         if self.status == self.STATUS_WATCHED:
             return True
 
-        valid_interval = self.source.target_duration * self.SEGMENTS_TO_STORE
+        valid_interval = self.source.get_gross_sequence_length() * self.source.SOURCE_SEQUENCES_TO_STORE
 
         tz = get_default_timezone()
         now = datetime.now(tz)
