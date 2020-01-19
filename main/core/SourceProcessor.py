@@ -24,8 +24,8 @@ class SourceProcessor:
 
         return source
 
-    def get_source_from_external(self, source: Optional[Source] = None) -> Source:
-        m3u8_obj = self.download_m3u8(self.url)
+    def __get_source_from_external(self, source: Optional[Source] = None) -> Source:
+        m3u8_obj = self.__download_m3u8(self.url)
         name = Source.generate_name(self.url)
 
         tz = get_default_timezone()
@@ -42,16 +42,16 @@ class SourceProcessor:
 
         return source
 
-    def download_m3u8(self, url: str) -> M3U8:
+    def __download_m3u8(self, url: str) -> M3U8:
         m3u8_obj = m3u8.load(url, 30)
         if m3u8_obj.is_variant:
-            playlist = self.get_biggest_bitrate(m3u8_obj.playlists)
-            return self.download_m3u8(playlist.absolute_uri)
+            playlist = self.__get_biggest_bitrate(m3u8_obj.playlists)
+            return self.__download_m3u8(playlist.absolute_uri)
 
         return m3u8_obj
 
     @staticmethod
-    def get_biggest_bitrate(playlists: List[Playlist]) -> Playlist:
+    def __get_biggest_bitrate(playlists: List[Playlist]) -> Playlist:
         result = playlists[0]
         bandwidth = playlists[0].stream_info.bandwidth
         for playlist in playlists:
@@ -59,6 +59,3 @@ class SourceProcessor:
                 result = playlist
                 bandwidth = playlist.stream_info.bandwidth
         return result
-
-
-
