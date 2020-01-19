@@ -31,6 +31,8 @@ class Source(models.Model):
         return interval > (self.get_gross_sequence_length() * self.SOURCE_SEQUENCES_TO_STORE)
 
     def is_data_outdated(self) -> bool:
+        if self.requested_by_server is None:
+            return True
         tz = get_default_timezone()
         now = datetime.now(tz)
         interval = (now - self.requested_by_server).total_seconds()
