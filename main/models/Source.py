@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime
 
 from django.db import models
@@ -39,3 +40,7 @@ class Source(models.Model):
         May be a little more then real sequence length
         """
         return self.target_duration * self.segments_per_file
+
+    @staticmethod
+    def generate_name(url: str) -> str:
+        return hashlib.md5(url.encode()).hexdigest()
