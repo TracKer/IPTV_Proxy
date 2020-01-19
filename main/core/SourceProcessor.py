@@ -17,9 +17,6 @@ class SourceProcessor:
     def __get_source(self) -> Source:
         try:
             source = Source.objects.get(url=self.url)
-            if source.is_data_outdated():
-                source = self.__get_source_from_external(source)
-                source.save()
         except Source.DoesNotExist:
             source = self.__get_source_from_external()
             source.save()
@@ -61,3 +58,8 @@ class SourceProcessor:
                 result = playlist
                 bandwidth = playlist.stream_info.bandwidth
         return result
+
+    def update_source(self, force: bool = False) -> None:
+        if force or self.source.is_data_outdated():
+            self.source = self.__get_source_from_external(self.source)
+            self.source.save()
