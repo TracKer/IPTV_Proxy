@@ -33,7 +33,7 @@ class Source(models.Model):
     def is_data_outdated(self) -> bool:
         tz = get_default_timezone()
         now = datetime.now(tz)
-        interval = (now - self.requested_from_server).total_seconds()
+        interval = (now - self.requested_by_server).total_seconds()
         return interval > self.get_request_interval()
 
     def get_estimated_sequence_length(self) -> int:
