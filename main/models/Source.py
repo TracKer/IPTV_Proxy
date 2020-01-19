@@ -20,9 +20,27 @@ class Source(models.Model):
         # Request interval is a half of target_duration - average segment length
         return round(self.target_duration / 2)
 
-    def is_outdated(self) -> bool:
+    def is_source_outdated(self) -> bool:
         # Outdated if no requests for (target_duration * segments_per_file) seconds - time of all segments in file
         tz = get_default_timezone()
         now = datetime.now(tz)
         interval = (now - self.requested).total_seconds()
-        return interval >= (self.target_duration * self.segments_per_file)
+        return interval >= self.get_gross_sequence_length()
+
+    def is_data_outdated(self) -> bool:
+        tz = get_default_timezone()
+        now = datetime.now(tz)
+        interval = (now - self.requested).total_seconds()
+        return interval >= self.get_estimated_sequence_length()
+
+    def get_estimated_sequence_length(self) -> int:
+        """
+        May be a little less then real sequence length
+        """
+        return self.get_gross_sequence_length() - self.segments_per_file
+
+    def get_gross_sequence_length(self) -> int:
+        """
+        May be a little more then real sequence length
+        """
+        return self.target_duration * self.segments_per_file
