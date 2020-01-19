@@ -1,13 +1,21 @@
+from datetime import datetime
 from django.db import models
+from django.utils.timezone import get_default_timezone
 
 from main.models import Source
 
 
 class Segment(models.Model):
+    SEGMENTS_TO_STORE = 10
+
+    STATUS_NEW = 0
+    STATUS_AVAILABLE = 1
+    STATUS_WATCHED = 2
+
     _STATUSES = [
-        (0, 'New'),
-        (1, 'Available'),
-        (2, 'Watched')
+        (STATUS_NEW, 'New'),
+        (STATUS_AVAILABLE, 'Available'),
+        (STATUS_WATCHED, 'Watched'),
     ]
 
     source = models.ForeignKey(Source, on_delete=models.CASCADE, related_name='segments')
@@ -21,3 +29,15 @@ class Segment(models.Model):
 
     class Meta:
         db_table = 'segment'
+
+    def is_outdated(self) -> bool:
+        if self.status == self.STATUS_WATCHED:
+            return True
+
+        valid_interval = self.source.target_duration * self.SEGMENTS_TO_STORE
+
+        tz = get_default_timezone()
+        now = datetime.now(tz)
+        interval = (now - self.updated).total_seconds()
+
+        return interval > valid_interval
