@@ -21,7 +21,8 @@ class Migration(migrations.Migration):
                 ('target_duration', models.PositiveIntegerField()),
                 ('segments_per_file', models.PositiveSmallIntegerField()),
                 ('created', models.DateTimeField(auto_now_add=True)),
-                ('requested', models.DateTimeField(auto_now=True)),
+                ('requested_by_client', models.DateTimeField(auto_now_add=True)),
+                ('requested_by_server', models.DateTimeField(null=True)),
             ],
             options={
                 'db_table': 'source',

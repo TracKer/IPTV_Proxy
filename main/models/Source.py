@@ -14,7 +14,8 @@ class Source(models.Model):
     target_duration = models.PositiveIntegerField()
     segments_per_file = models.PositiveSmallIntegerField()
     created = models.DateTimeField(auto_now_add=True)
-    requested = models.DateTimeField(auto_now=True)
+    requested_by_client = models.DateTimeField(auto_now_add=True)
+    requested_by_server = models.DateTimeField(null=True)
 
     class Meta:
         db_table = 'source'
@@ -26,8 +27,14 @@ class Source(models.Model):
     def is_source_outdated(self) -> bool:
         tz = get_default_timezone()
         now = datetime.now(tz)
-        interval = (now - self.requested).total_seconds()
-        return interval >= (self.get_gross_sequence_length() * self.SOURCE_SEQUENCES_TO_STORE)
+        interval = (now - self.requested_by_client).total_seconds()
+        return interval > (self.get_gross_sequence_length() * self.SOURCE_SEQUENCES_TO_STORE)
+
+    def is_data_outdated(self) -> bool:
+        tz = get_default_timezone()
+        now = datetime.now(tz)
+        interval = (now - self.requested_from_server).total_seconds()
+        return interval > self.get_request_interval()
 
     def get_estimated_sequence_length(self) -> int:
         """
