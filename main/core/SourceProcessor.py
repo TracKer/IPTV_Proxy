@@ -9,17 +9,19 @@ from main.models import Source
 
 
 class SourceProcessor:
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: Optional[str] = None, source: Optional[Source] = None) -> None:
         super().__init__()
-        self.url = url
+        self.url = url if url is not None else source.url
+        self.source = source if source is not None else self.__get_source()
 
-    def get_source(self) -> Source:
-        source = Source.objects.get(url=self.url)
-        if source is None:
-            source = self.get_source_from_external()
-            source.save()
-        elif source.is_data_outdated():
-            source = self.get_source_from_external(source)
+    def __get_source(self) -> Source:
+        try:
+            source = Source.objects.get(url=self.url)
+            if source.is_data_outdated():
+                source = self.__get_source_from_external(source)
+                source.save()
+        except Source.DoesNotExist:
+            source = self.__get_source_from_external()
             source.save()
 
         return source
