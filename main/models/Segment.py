@@ -1,7 +1,11 @@
+import os
 from datetime import datetime
+from os import unlink
+
 from django.db import models
 from django.utils.timezone import get_default_timezone
 
+from IPTV_Proxy.settings import STATIC_ROOT
 from main.models import Source
 
 
@@ -41,3 +45,8 @@ class Segment(models.Model):
         interval = (now - self.updated).total_seconds()
 
         return interval > valid_interval
+
+    def delete(self, using=None, keep_parents=False):
+        file_path = os.path.join(STATIC_ROOT, ('segments', self.name))
+        unlink(file_path)
+        return super().delete(using, keep_parents)
