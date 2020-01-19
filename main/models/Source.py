@@ -5,6 +5,8 @@ from django.utils.timezone import get_default_timezone
 
 
 class Source(models.Model):
+    SOURCE_SEQUENCES_TO_STORE = 3
+
     name = models.CharField(max_length=64, unique=True, null=False)
     url = models.CharField(max_length=255, null=False)
     last_sequence = models.PositiveIntegerField()
@@ -21,17 +23,10 @@ class Source(models.Model):
         return round(self.target_duration / 2)
 
     def is_source_outdated(self) -> bool:
-        # Outdated if no requests for (target_duration * segments_per_file) seconds - time of all segments in file
         tz = get_default_timezone()
         now = datetime.now(tz)
         interval = (now - self.requested).total_seconds()
-        return interval >= self.get_gross_sequence_length()
-
-    def is_data_outdated(self) -> bool:
-        tz = get_default_timezone()
-        now = datetime.now(tz)
-        interval = (now - self.requested).total_seconds()
-        return interval >= self.get_estimated_sequence_length()
+        return interval >= (self.get_gross_sequence_length() * self.SOURCE_SEQUENCES_TO_STORE)
 
     def get_estimated_sequence_length(self) -> int:
         """
