@@ -2,26 +2,35 @@ import m3u8
 from datetime import datetime
 from typing import List, Optional
 from django.utils.timezone import get_default_timezone
-from m3u8 import M3U8, Playlist
-from main.models import Source
+from m3u8 import M3U8, Playlist, Segment as M3U8_Segment
+from main.models import Source, Segment
 
 
 class SourceProcessor:
     def __init__(self, url: Optional[str] = None, source: Optional[Source] = None) -> None:
         super().__init__()
-        self.__url = url if url is not None else source.url
-        self.__source = source if source is not None else self.__get_source()
+        self.__url = url
+        self.__source = source
 
-    def __get_source(self) -> Source:
-        try:
-            source = Source.objects.get(url=self.__url)
-        except Source.DoesNotExist:
-            source = self.__get_source_from_external()
-            source.save()
+        if (self.__url is None) and (self.__source is None):
+            raise Exception('Both url and source can not be None')
 
-        return source
+        if self.__url is None:
+            self.__url = self.__source.url
+        elif self.__source is None:
+            try:
+                # Try to find in DB
+                self.__source = Source.objects.get(url=self.__url)
+            except Source.DoesNotExist:
+                # Get from external source
+                self.__source = Source()
+                self.update_source(force=True)
 
-    def __get_source_from_external(self, source: Optional[Source] = None) -> Source:
+    def update_source(self, force: bool = False) -> None:
+        if force or self.__source.is_data_outdated():
+            self.__source = self.__get_from_external_source(self.__source)
+
+    def __get_from_external_source(self, source: Optional[Source] = None) -> Source:
         m3u8_obj = self.__download_m3u8(self.__url)
         name = Source.generate_name(self.__url)
 
@@ -36,6 +45,9 @@ class SourceProcessor:
         source.target_duration = round(m3u8_obj.target_duration)
         source.segments_per_file = len(m3u8_obj.segments)
         source.requested_by_server = now
+        source.save()
+
+        self.__process_segments(m3u8_obj.segments)
 
         return source
 
@@ -57,7 +69,27 @@ class SourceProcessor:
                 bandwidth = playlist.stream_info.bandwidth
         return result
 
-    def update_source(self, force: bool = False) -> None:
-        if force or self.__source.is_data_outdated():
-            self.__source = self.__get_source_from_external(self.__source)
-            self.__source.save()
+    def __process_segments(self, segments_list: List[M3U8_Segment]):
+        segments_m3u8 = self.__filter_out_existent_segments(segments_list)
+
+        # Add new segments to DB
+        for segment_m3u8 in segments_m3u8:
+            segment = Segment()
+            segment.source = self.__source
+            segment.duration = segment_m3u8.duration
+            segment.name = f'{self.__source.id}-{Segment.generate_name(segment_m3u8.absolute_uri)}'
+            segment.name_original = segment_m3u8.absolute_uri
+            segment.status = Segment.STATUS_NEW
+            segment.save()
+
+    @staticmethod
+    def __filter_out_existent_segments(segments_list: List[M3U8_Segment]) -> List[M3U8_Segment]:
+        segments_m3u8 = {segment_m3u8.absolute_uri: segment_m3u8 for segment_m3u8 in segments_list}
+        segments_db = Segment.objects.get(name_original__in=segments_m3u8.keys())
+
+        # Remove segments that are already in DB
+        for segment_db in segments_db:
+            if segment_db.name_original in segments_m3u8.keys():
+                del segments_m3u8[segment_db.name_original]
+
+        return list(segments_m3u8.values())

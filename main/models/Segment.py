@@ -1,3 +1,4 @@
+import hashlib
 import os
 from datetime import datetime
 from os import unlink
@@ -47,3 +48,7 @@ class Segment(models.Model):
         file_path = os.path.join(STATIC_ROOT, ('segments', self.name))
         unlink(file_path)
         return super().delete(using, keep_parents)
+
+    @staticmethod
+    def generate_name(url: str) -> str:
+        return hashlib.md5(url.encode()).hexdigest()
