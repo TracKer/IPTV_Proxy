@@ -1,5 +1,3 @@
-from builtins import id
-
 from django.core.management import BaseCommand, CommandError
 from main.core.SourceProcessor import SourceProcessor
 from main.models import Source
@@ -17,5 +15,5 @@ class Command(BaseCommand):
 
         source = Source.objects.get(id=source_id)
 
-        processor = SourceProcessor(source=source)
+        processor = SourceProcessor(self.stdout, source=source)
         processor.update_source()

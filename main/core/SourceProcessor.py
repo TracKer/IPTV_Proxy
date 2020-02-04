@@ -1,23 +1,31 @@
+import sys
+from binascii import crc32
 import m3u8
 from datetime import datetime
 from typing import List, Optional
+from django.core.management.base import OutputWrapper
 from django.utils.timezone import get_default_timezone
 from m3u8 import M3U8, Playlist, Segment as M3U8_Segment
 from main.models import Source, Segment
 
 
 class SourceProcessor:
-    def __init__(self, url: Optional[str] = None, source: Optional[Source] = None) -> None:
+    def __init__(self, stdout: OutputWrapper, url: Optional[str] = None, source: Optional[Source] = None) -> None:
         super().__init__()
+
+        self.stdout = stdout
         self.__url = url
         self.__source = source
+        self.__display_name: str = ''
 
         if (self.__url is None) and (self.__source is None):
             raise Exception('Both url and source can not be None')
 
         if self.__url is None:
             self.__url = self.__source.url
+            self.__display_name = crc32(self.__url)
         elif self.__source is None:
+            self.__display_name = crc32(self.__url)
             try:
                 # Try to find in DB
                 self.__source = Source.objects.get(url=self.__url)
@@ -45,6 +53,11 @@ class SourceProcessor:
         source.target_duration = round(m3u8_obj.target_duration)
         source.segments_per_file = len(m3u8_obj.segments)
         source.requested_by_server = now
+
+        if self.__source.last_sequence >= source.last_sequence:
+            self.stdout.write(f'[DOWNLOAD] Downloaded source {self.__display_name} has outdated sequence')
+            raise Exception()
+
         source.save()
 
         self.__process_segments(m3u8_obj.segments)
@@ -52,7 +65,24 @@ class SourceProcessor:
         return source
 
     def __download_m3u8(self, url: str) -> M3U8:
-        m3u8_obj = m3u8.load(url, 30)
+        tries = 0
+        max_tries = 10
+        downloaded = False
+        m3u8_obj = None
+        while (tries < max_tries) and (not downloaded):
+            try:
+                m3u8_obj = m3u8.load(url, 3)
+                downloaded = True
+                self.stdout.write(f'[DOWNLOAD] Source {self.__display_name} - Downloaded')
+            except:
+                e_type, e_value, traceback = sys.exc_info()[0]
+                self.stdout.write(f'[DOWNLOAD] Source {self.__display_name} - Failed ({tries}/{max_tries})')
+            tries += 1
+
+        if not downloaded:
+            self.stdout.write(f'[DOWNLOAD] Source {self.__display_name} - Download failed!')
+            raise Exception()
+
         if m3u8_obj.is_variant:
             playlist = self.__get_biggest_bitrate(m3u8_obj.playlists)
             return self.__download_m3u8(playlist.absolute_uri)
