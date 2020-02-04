@@ -6,17 +6,19 @@ from os import unlink
 from django.db import models
 from django.utils.timezone import get_default_timezone
 
-from IPTV_Proxy.settings import STATIC_ROOT
+from IPTV_Proxy.settings import STATIC_ROOT, MEDIA_ROOT
 from main.models import Source
 
 
 class Segment(models.Model):
     STATUS_NEW = 0
-    STATUS_AVAILABLE = 1
-    STATUS_WATCHED = 2
+    STATUS_DOWNLOADING = 1
+    STATUS_AVAILABLE = 2
+    STATUS_WATCHED = 3
 
     _STATUSES = [
         (STATUS_NEW, 'New'),
+        (STATUS_DOWNLOADING, 'Downloading'),
         (STATUS_AVAILABLE, 'Available'),
         (STATUS_WATCHED, 'Watched'),
     ]
@@ -33,6 +35,9 @@ class Segment(models.Model):
         db_table = 'segment'
 
     def is_outdated(self) -> bool:
+        if self.status == self.STATUS_DOWNLOADING:
+            return False
+
         if self.status == self.STATUS_WATCHED:
             return True
 
@@ -45,10 +50,13 @@ class Segment(models.Model):
         return interval > valid_interval
 
     def delete(self, using=None, keep_parents=False):
-        file_path = os.path.join(STATIC_ROOT, ('segments', self.name))
+        file_path = self.get_file_path()
         unlink(file_path)
         return super().delete(using, keep_parents)
 
     @staticmethod
     def generate_name(url: str) -> str:
         return hashlib.md5(url.encode()).hexdigest()
+
+    def get_file_path(self) -> str:
+        return os.path.join(MEDIA_ROOT, ('segments', self.name))
