@@ -123,3 +123,6 @@ class SourceProcessor:
                 del segments_m3u8[segment_db.name_original]
 
         return list(segments_m3u8.values())
+
+    def get_source(self) -> Source:
+        return self.__source

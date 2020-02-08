@@ -27,6 +27,7 @@ class Command(BaseCommand):
 
         manage_py_path = os.path.join(BASE_DIR, 'manage.py')
 
+        dots_in_line: int = 0
         while True:
             Cleaner.do_cleanup()
 
@@ -42,6 +43,12 @@ class Command(BaseCommand):
 
             self.terminate_finished_processes()
             sleep(1)
+            self.stdout.write('.', ending='')
+
+            dots_in_line += 1
+            if dots_in_line >= 20:
+                dots_in_line = 0
+                self.stdout.write('\n', ending='')
 
     @staticmethod
     def find_sources_for_data_update() -> List[Source]:
