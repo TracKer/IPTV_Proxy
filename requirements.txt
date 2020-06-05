@@ -1,7 +1,7 @@
 asgiref==3.2.3
 certifi==2019.11.28
 chardet==3.0.4
-Django==3.0.3
+Django==3.0.7
 idna==2.8
 iso8601==0.1.12
 m3u8==0.5.3
